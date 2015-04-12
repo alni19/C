@@ -1,1 +1,1 @@
-test github
+Multi-threaded implementation of PCA for factor-driven mean-variance portfolio selection problem based on a master-worker framework.
