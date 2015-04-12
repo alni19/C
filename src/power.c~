@@ -2,6 +2,9 @@
 #include <unistd.h>
 #include "utilities.h"
 #include "power.h"
+int engine(int numassets, int numfactors, 
+	     double *ub, double *lb, double *mu, double *sigma2, 
+	     double *V, double *F,double lambda,pthread_mutex_t *poutputmutex );
 
 void poweralg(int ID, int n, double *vector, double *newvector, double *matrix, powerbag *pbag, double *eigenVal)
 {
@@ -141,8 +144,8 @@ void CALLWORKER(powerbag *pbag)
   /***********Part Zero: Initialization***********/
   int ID;
   int code = 0;
-  int retcode=0;
-  int i,t,j,k,n,r;
+  int retcode = 0;
+  int i,t,j,n,r;
   int waitcount;
   char letsgo = 0;
   double *matrix = NULL, *vector = NULL, *newvector = NULL;
@@ -208,7 +211,7 @@ lambda = pbag->lambda;
       ++waitcount;
 
     }
-
+}
     pthread_mutex_lock(pbag->poutputmutex);
     printf("ID %d: got signal to start working\n", pbag->ID);
     pthread_mutex_unlock(pbag->poutputmutex);
@@ -308,7 +311,7 @@ lambda = pbag->lambda;
   pthread_mutex_unlock(pbag->poutputmutex);
   
   retcode = engine(n,r,ub,lb,mu,residual,Vtranspose,F,lambda,pbag->poutputmutex);
-  
+  if(retcode) goto BACK;  
   /**********Done with work**********************/
    pthread_mutex_lock(pbag->psynchro);
    pbag->status = DONEWITHWORK;
@@ -323,16 +326,10 @@ lambda = pbag->lambda;
   printf(" ID %d quitting\n", pbag->ID);
   pthread_mutex_unlock(pbag->poutputmutex);  
 
-
-  Back1:
+  BACK:
   pthread_mutex_lock(pbag->poutputmutex);
-  printf("error retcode%d:\n", retcode);
-  pthread_mutex_unlock(pbag->poutputmutex); 
-  
-  Back2:
-  pthread_mutex_lock(pbag->poutputmutex);
-  printf("error code%d:\n", code);
-  pthread_mutex_unlock(pbag->poutputmutex); 
+  printf(" retcode= %d\n", retcode);
+  pthread_mutex_unlock(pbag->poutputmutex);
 }
 
 
