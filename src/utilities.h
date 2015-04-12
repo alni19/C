@@ -14,6 +14,8 @@ void gotosleep(int numseconds);
 void erasefile(char *filename);
 double drawnormal(void);
 void split(double* price,char* str);
-void normal_sum0_init(double* array, int N);/* initilizes a normal array with sum 0*/
+void normal_sum0_init(double* arr, int N);/* initilizes a normal array with sum 0*/
+void calculate_v(const double** matrix, double* v,int numassets, int numdays);
+void perturb(const double** matrix, double** target, int numassets, int numdays,const double* v);
 
 #endif
