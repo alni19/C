@@ -45,9 +45,9 @@ double drawnormal(void)
 
 void normal_sum0_init(double* arr, int N)
 {
-    srand(time(NULL));
-    int i;
+    int i;    
     double sum=0,average;
+    srand(time(NULL));
     for (i=0;i<N;i++)
     {
         arr[i]=drawnormal();
@@ -61,14 +61,12 @@ void normal_sum0_init(double* arr, int N)
 }
 
 void split(double* price,char* str){
-    double num;
     int i=0;
     char * pch;
     pch = strtok (str," ,-");
     while (pch != NULL)
     {
         price[i]=atof(pch);
-        //printf("%f\n",price[i]);
         i++;
         pch = strtok (NULL, " ,-");
     }
@@ -76,7 +74,7 @@ void split(double* price,char* str){
 
 
 
-void calculate_v(const double** matrix, double* v,int numassets, int numdays)
+void calculate_v(double** matrix, double* v,int numassets, int numdays)
 {
 	int i,j;
 	double mu;
@@ -98,7 +96,7 @@ void calculate_v(const double** matrix, double* v,int numassets, int numdays)
     }
 }
 
-void perturb(const double** matrix, double** target, int numassets, int numdays,const double* v)
+void perturb(double** matrix, double** target, int numassets, int numdays,double* v,double scale)
 {
     int i,j;
     double* eps;
@@ -112,6 +110,9 @@ void perturb(const double** matrix, double** target, int numassets, int numdays,
             target[i][j+1]=target[i][j]*(1+(matrix[i][j+1]-matrix[i][j])/matrix[i][j]+v[i]*eps[j]);
         }
     }
+    for(i=0;i<numassets;i++)
+        for (j=0;j<numdays;j++)
+            target[i][j]=(1-scale)*matrix[i][j]+scale*target[i][j];
 }
 
 void calcMuCov(double **matrix, int n, int t, double *mu, double *cov)
@@ -142,4 +143,20 @@ void calcMuCov(double **matrix, int n, int t, double *mu, double *cov)
         cov[i*n+j]=sum/(t-1);
      }
   }
+}
+
+
+void csvread(const char *filename,double** matrix)
+{
+    printf("%s","Loading CSV...");
+    char line[6000];
+    int i=0;
+    FILE* stream = fopen(filename, "r");
+    while (fgets(line, 6000, stream))
+    {
+        split(matrix[i],line);
+        i++;
+        //printf ("%f\n",matrix[0][0]);
+    }
+    printf("%s","Loading ends.");
 }

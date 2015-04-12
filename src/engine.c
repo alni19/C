@@ -3,7 +3,8 @@
 #include <stdlib.h>
 #include <string.h> 
 #include <gurobi_c.h>
-
+#include <pthread.h>
+#include <unistd.h>
 
 int engine(int numassets, int numfactors, 
 	     double *ub, double *lb, double *mu, double *sigma2, 
@@ -24,9 +25,9 @@ int engine(int numassets, int numfactors,
 
   char **names, bigname[100];
 
-  pthread_mutex_lock(pbag->poutputmutex);
+  pthread_mutex_lock(poutputmutex);
   printf("running solver engine\n");
-  pthread_mutex_unlock(pbag->poutputmutex);
+  pthread_mutex_unlock(poutputmutex);
 
   n = numassets + numfactors;
 
@@ -82,9 +83,9 @@ int engine(int numassets, int numfactors,
   qval = (double *) calloc(Nq, sizeof(double));  /** values **/
 
   if( ( qrow == NULL) || ( qcol == NULL) || (qval == NULL) ){
-    pthread_mutex_lock(pbag->poutputmutex);
+    pthread_mutex_lock(poutputmutex);
     printf("could not create quadratic\n");
-    pthread_mutex_unlock(pbag->poutputmutex);
+    pthread_mutex_unlock(poutputmutex);
     retcode = 1; goto BACK;
 
   }
@@ -110,9 +111,9 @@ int engine(int numassets, int numfactors,
   cind = (int *)calloc(n, sizeof(int));  /** n is over the top since no constraint is totally dense;		     but it's not too bad here **/
   cval= (double *)calloc(n, sizeof(double));
   if(!cval){
-    pthread_mutex_lock(pbag->poutputmutex);
+    pthread_mutex_lock(poutputmutex);
     printf("cannot allocate cval\n"); retcode = 2; goto BACK;
-    pthread_mutex_unlock(pbag->poutputmutex);
+    pthread_mutex_unlock(poutputmutex);
   }
   for(i = 0; i < numfactors; i++){
     for(j = 0; j < numassets; j++){
@@ -154,9 +155,9 @@ int engine(int numassets, int numfactors,
   /** now let's see the values **/
 
   for(j = 0; j < n; j++){
-    pthread_mutex_lock(pbag->poutputmutex);
+    pthread_mutex_lock(poutputmutex);
     printf("%s = %g\n", names[j], x[j]);
-    pthread_mutex_unlock(pbag->poutputmutex);
+    pthread_mutex_unlock(poutputmutex);
   }
 
   GRBfreemodel(model);
@@ -165,8 +166,8 @@ int engine(int numassets, int numfactors,
 
 
  BACK:
-  pthread_mutex_lock(pbag->poutputmutex);
+  pthread_mutex_lock(poutputmutex);
   printf("engine exits with code %d\n", retcode);
-  pthread_mutex_unlock(pbag->poutputmutex);
+  pthread_mutex_unlock(poutputmutex);
   return retcode;
 }

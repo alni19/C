@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <string.h>
 #include "utilities.h"
 #include "power.h"
 
@@ -9,51 +10,38 @@ void *PWR_wrapper(void *pvoidedbag);
 
 int main(int argc, char *argv[])
 {
-    int code = 0, i, j, n, initialruns, activeworkers, scheduledjobs;
-    int numassets = 1000;
-    int numdays = 250;
+    int code = 0, i, j, initialruns, activeworkers, scheduledjobs;
+    int numassets = 10;
+    int numdays = 7;
     double lambda = 1;
     double* lb, *ub;
-    lb = (double*)calloc(numassets,sizeof(double));
-    ub = (double*)calloc(numassets,sizeof(double));
-    for(i=0;i<numassets;i++){lb[i]=-10000;ub[i]=10000;}
-    int r=5;//factor number
+    int r=2;/*factor number*/
     double** matrix;
-    double** realmatrix;
     double*** matrix_array;
-    double* mu;
     double* v;
-    double eps_square_sum = 0;
-    char line[6000];
-    //
     powerbag **ppbag = NULL, *pbag;
-    double scale = 1.0;
+    double scale = 1.0;	
     int quantity = 1, numworkers = 1, theworker;
     char gotone;
     pthread_t *pthethread1;
     pthread_mutex_t output;
-    pthread_mutex_t *psynchro_array;
-    //
+    pthread_mutex_t *psynchro_array;    
+    lb = (double*)calloc(numassets,sizeof(double));
+    ub = (double*)calloc(numassets,sizeof(double));
+    for(i=0;i<numassets;i++){lb[i]=-10000;ub[i]=10000;}
+    printf("%s","check point 1\n");
     matrix_array = (double***)calloc(quantity,sizeof(double**));
     matrix = (double**) calloc(numassets,sizeof(double*));
     for (i=0; i<numassets; i++) matrix[i] = (double*) calloc(numdays,sizeof(double));/*initialize the time series matrix*/
-    realmatrix = (double**) calloc(numassets,sizeof(double*));
-    for (i=0; i<numassets; i++) realmatrix[i] = (double*) calloc(numdays,sizeof(double));
-    mu = (double*)calloc(numassets,sizeof(double));
 
     v = (double*)calloc(numassets,sizeof(double));
-    FILE* stream = fopen("dump2.csv", "r");
-
-    //reads data from CSV file into a matrix
-    i=0;
-    while (fgets(line, 6000, stream))
-    {
-        split(matrix[i],line);
-        i++;
-    }
+    printf("%s","check point 2\n");
+    /*reads data from CSV file into a matrix*/
+    csvread("dump.csv",matrix);
+    printf("%s\n","show me");
     calculate_v(matrix,v,numassets,numdays);
-    //calculates the perturbation
-    /*
+
+    /*calculates the perturbation
     perturb(matrix,realmatrix,numassets,numdays,v);
     for(i=0;i<numassets;i++)
         for (j=0;j<numdays;j++)
@@ -87,12 +75,10 @@ int main(int argc, char *argv[])
 	 numworkers);
 
   if( numworkers > quantity ){
-    numworkers = quantity; printf(" --> reset workers to %d\n", numworkers);
+    numworkers = quantity; printf(" --> reset workers to %d\n", numworkers);  
   }
 
-
   pthread_mutex_init(&output, NULL); /** common to everybody **/
-
 
   psynchro_array = (pthread_mutex_t *)calloc(numworkers, sizeof(pthread_mutex_t));
   if(!psynchro_array){
@@ -101,21 +87,26 @@ int main(int argc, char *argv[])
 
   for(j = 0; j < numworkers; j++)
     pthread_mutex_init(&psynchro_array[j], NULL);
-
+  printf("%d",1);
   ppbag = (powerbag **)calloc(numworkers, sizeof(powerbag *));
   if(!ppbag){
     printf("could not create bag array\n"); code = NOMEMORY; goto BACK;
   }
-
+  for(j=0; j<numworkers; j++)
+  {
+    ppbag[j]=(powerbag*)calloc(1,sizeof(powerbag));
+  }
   pthethread1 = (pthread_t *)calloc(numworkers, sizeof(pthread_t));
   if(!pthethread1){
     printf("could not create thread array\n"); code = NOMEMORY; goto BACK;
   }
-
+  /*******till here everything fine*******/
+  
 
 
   for(j = 0; j < numworkers; j++){
-
+    printf("worker %d\n",j);
+    printf("pbag\n",j);
     pbag = ppbag[j];
     pbag->psynchro = &psynchro_array[j];
     pbag->poutputmutex = &output;
@@ -130,7 +121,7 @@ int main(int argc, char *argv[])
     pbag->r = r;
 
     printf("about to launch thread for worker %d\n", j);
-//might be some prob
+
     pthread_create(&pthethread1[j], NULL, &PWR_wrapper, (void *) pbag);
   }
 
@@ -141,10 +132,10 @@ int main(int argc, char *argv[])
     pbag = ppbag[theworker];
     matrix_array[theworker] = (double**)calloc(numassets,sizeof(double*));
     for (i=0; i<numassets; i++) matrix_array[theworker][i] = (double*) calloc(numdays,sizeof(double));
-    perturb(matrix,matrix_array[theworker],numassets,numdays,v);
+    perturb(matrix,matrix_array[theworker],numassets,numdays,v,scale);
 
     pthread_mutex_lock(&output);
-    printf("*****master:  worker %d will run experiment %d\n", theworker, j);
+    printf("*****master:  worker %d will run experiment %d\n", theworker, theworker);
     pthread_mutex_unlock(&output);
 
     /** tell the worker to work **/
@@ -154,7 +145,6 @@ int main(int argc, char *argv[])
     pbag->status = WORKING;
     pbag->jobnumber = theworker;
     pthread_mutex_unlock(&psynchro_array[theworker]);
-
   }
   scheduledjobs = activeworkers = initialruns;
 
@@ -202,7 +192,7 @@ int main(int argc, char *argv[])
         pbag = ppbag[theworker];
         matrix_array[scheduledjobs] = (double**)calloc(numassets,sizeof(double*));
         for (i=0; i<numassets; i++) matrix_array[scheduledjobs][i] = (double*) calloc(numdays,sizeof(double));
-        perturb(matrix,matrix_array[theworker],numassets,numdays,v);
+        perturb(matrix,matrix_array[theworker],numassets,numdays,v,scale);
 
       pthread_mutex_lock(&output);
       printf("master:  worker %d will run experiment %d\n", theworker, scheduledjobs);
@@ -240,7 +230,15 @@ int main(int argc, char *argv[])
     pbag = ppbag[j];
     PWRfreespace(&pbag);
   }
-  free(ppbag);
+  free(ppbag);  
+
+
+
+
+
+
+
+
 
 BACK:
   return code;

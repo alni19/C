@@ -45,19 +45,19 @@ CPXLPINCDIR = /opt/ibm/ILOG/CPLEX_Enterprise_Server126/CPLEX_Studio/cplex/includ
 #------------ LPSOLVER CHOICE MADE HERE ---------------
 
 #CCCLNFLAGS = $(CPXLNFLAGS) $(LIBS)
-#CCCLNFLAGS = $(GRBLNFLAGS) $(LIBS)
-#LPINCDIR = $(GRBLPINCDIR) #none for this project
+CCCLNFLAGS = $(GRBLNFLAGS) $(LIBS)
+LPINCDIR = $(GRBLPINCDIR) #none for this project
 
-CCCLNFLAGS = $(LIBS)
-LPINCDIR =
+#CCCLNFLAGS = $(LIBS)
+#LPINCDIR =
 
-CCCFLAGS = 
+CCCFLAGS = -I$(LPINCDIR) 
 
 ../bin/%.o: %.c
 	@echo compiling $*.c with $(CCC) $(CCCFLAGS)
 	@$(CCC) $(CCCFLAGS) -c $< -o $@
 
-RPOWER = ../bin/mainrpower.o ../bin/power.o ../bin/utilities.o
+RPOWER = ../bin/mainrpower.o ../bin/power.o ../bin/utilities.o ../bin/engine.o
 
 rpower: $(RPOWER)
 	$(CCC) $(CCCFLAGS) -o ../bin/rpower $(RPOWER) $(CCCLNFLAGS)

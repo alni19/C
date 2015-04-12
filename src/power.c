@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include "utilities.h"
 #include "power.h"
+
 int engine(int numassets, int numfactors, 
 	     double *ub, double *lb, double *mu, double *sigma2, 
 	     double *V, double *F,double lambda,pthread_mutex_t *poutputmutex );
@@ -210,7 +211,7 @@ lambda = pbag->lambda;
       ++waitcount;
 
     }
-}
+
     pthread_mutex_lock(pbag->poutputmutex);
     printf("ID %d: got signal to start working\n", pbag->ID);
     pthread_mutex_unlock(pbag->poutputmutex);
@@ -303,7 +304,7 @@ lambda = pbag->lambda;
   
 
 
-  /*********Part two: Grubi Optimization*********/
+  /*********Part two: Gurobi Optimization*********/
 
   pthread_mutex_lock(pbag->poutputmutex);
   printf("numassets: %d; numfactors: %d\n", n, r);
@@ -311,14 +312,17 @@ lambda = pbag->lambda;
   
   retcode = engine(n,r,ub,lb,mu,residual,Vtranspose,F,lambda,pbag->poutputmutex);
   if(retcode) goto BACK;  
-  /**********Done with work**********************/
+  
+
+
+/**********Done with work**********************/
    pthread_mutex_lock(pbag->psynchro);
    pbag->status = DONEWITHWORK;
    pbag->command = STANDBY;
    pthread_mutex_unlock(pbag->psynchro);
    
 
-
+}
 
   DONE:
   pthread_mutex_lock(pbag->poutputmutex);
