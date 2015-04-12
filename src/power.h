@@ -23,7 +23,9 @@ typedef struct powerbag{
   double *lb;
   int status;
   int command;
-  int jobnumber;  
+  int jobnumber;
+  double obj;
+  double* x;  
   pthread_mutex_t *psynchro;
   pthread_mutex_t *poutputmutex;
 }powerbag;

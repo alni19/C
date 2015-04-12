@@ -152,15 +152,38 @@ void calcMuCov(double **matrix, int n, int t, double *mu, double *cov)
 
 void csvread(const char *filename,double** matrix)
 {
-    printf("%s","Loading CSV...");
     char line[6000];
     int i=0;
     FILE* stream = fopen(filename, "r");
+    printf("%s","Loading CSV...");
     while (fgets(line, 6000, stream))
     {
         split(matrix[i],line);
         i++;
-        //printf ("%f\n",matrix[0][0]);
     }
     printf("%s","Loading ends.");
+}
+
+double sharpe_ratio(double** matrix, double *portfolio, int numassets, int numdays)
+{
+    int i,j;
+    double* newprice = (double* ) calloc(numdays, sizeof(double));
+    double sum=0,sum_square=0;
+    double sigma, mu;
+    for (i=0; i<numdays; i++)
+    {
+        for (j=0; j<numassets;j++)
+            {
+                newprice[i]+=matrix[j][i]*portfolio[j];
+            }    
+    }
+    for (i=0; i<numdays-1; i++)
+    {
+        sum += (newprice[i+1]-newprice[i])/newprice[i];
+        sum_square += (newprice[i+1]-newprice[i])*(newprice[i+1]-newprice[i])/newprice[i]/newprice[i];
+    }
+    mu = sum/(numdays-1);
+    sigma = sqrt(sum_square/(numdays-1)-mu*mu);
+    return mu/sigma*sqrt(252);
+    free(newprice);     
 }

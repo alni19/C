@@ -11,8 +11,8 @@ void *PWR_wrapper(void *pvoidedbag);
 int main(int argc, char *argv[])
 {
     int code = 0, i, j, initialruns, activeworkers, scheduledjobs;
-    int numassets = 10;
-    int numdays = 7;
+    int numassets = 1000;
+    int numdays = 250;
     double lambda = 1;
     double* lb, *ub;
     int r=2;/*factor number*/
@@ -32,24 +32,16 @@ int main(int argc, char *argv[])
 
     matrix_array = (double***)calloc(quantity,sizeof(double**));
     matrix = (double**) calloc(numassets,sizeof(double*));
-    for (i=0; i<numassets; i++) matrix[i] = (double*) calloc(numdays,sizeof(double));/*initialize the time series matrix*/
+    for (i=0; i<numassets; i++) matrix[i] = (double*) calloc(numdays,sizeof(double));/*initialize the time series price matrix*/
 
     v = (double*)calloc(numassets,sizeof(double));
 
     /*reads data from CSV file into a matrix*/
-    csvread("dump.csv",matrix);
-    printf("%s\n","show me");
+    csvread("dump2.csv",matrix);
     calculate_v(matrix,v,numassets,numdays);
 
-    /*calculates the perturbation
-    perturb(matrix,realmatrix,numassets,numdays,v);
-    for(i=0;i<numassets;i++)
-        for (j=0;j<numdays;j++)
-            printf("%f\n",realmatrix[i][j]);
-    */
-
   if(argc < 2){
-    printf(" usage: rpower filename [-s scale] [-q quantity]\n");
+    printf(" usage: rpower filename [-s scale] [-q quantity] [-w workernumber]\n");
     code = 1; goto BACK;
   }
 
@@ -106,8 +98,6 @@ int main(int argc, char *argv[])
 
 
   for(j = 0; j < numworkers; j++){
-    printf("worker %d\n",j);
-    printf("pbag\n",j);
     pbag = ppbag[j];
     pbag->psynchro = &psynchro_array[j];
     pbag->poutputmutex = &output;
@@ -120,6 +110,7 @@ int main(int argc, char *argv[])
     pbag->ub = ub;
     pbag->lb = lb;
     pbag->r = r;
+    pbag->x=(double*)calloc(numassets,sizeof(double));
 
     printf("about to launch thread for worker %d\n", j);
 
@@ -232,13 +223,6 @@ int main(int argc, char *argv[])
     PWRfreespace(&pbag);
   }
   free(ppbag);  
-
-
-
-
-
-
-
 
 
 BACK:

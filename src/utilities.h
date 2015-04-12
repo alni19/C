@@ -19,4 +19,6 @@ void calculate_v(double** matrix, double* v,int numassets, int numdays);
 void perturb(double** matrix, double** target, int numassets, int numdays, double* v, double scale);
 void calcMuCov(double **matrix, int n, int t, double *mu, double *cov);
 void csvread(const char *filename,double** matrix);
+double sharpe_ratio(double** matrix, double *portfolio, int numassets, int numdays);
+
 #endif

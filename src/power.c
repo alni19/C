@@ -5,7 +5,7 @@
 
 int engine(int numassets, int numfactors, 
 	     double *ub, double *lb, double *mu, double *sigma2, 
-	     double *V, double *F,double lambda,pthread_mutex_t *poutputmutex ,int ID);
+	     double *V, double *F,double lambda,pthread_mutex_t *poutputmutex ,int ID, powerbag* pbag);
 
 void poweralg(int ID, int n, double *vector, double *newvector, double *matrix, powerbag *pbag, double *eigenVal)
 {
@@ -311,7 +311,7 @@ lambda = pbag->lambda;
   printf("numassets: %d; numfactors: %d\n", n, r);
   pthread_mutex_unlock(pbag->poutputmutex);
   
-  retcode = engine(n,r,ub,lb,mu,residual,Vtranspose,F,lambda,pbag->poutputmutex,ID);
+  retcode = engine(n,r,ub,lb,mu,residual,Vtranspose,F,lambda,pbag->poutputmutex,ID, pbag);
   if(retcode) 
   {
   pthread_mutex_lock(pbag->poutputmutex);

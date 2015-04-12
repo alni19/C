@@ -5,10 +5,12 @@
 #include <gurobi_c.h>
 #include <pthread.h>
 #include <unistd.h>
+#include "utilities.h"
+#include "power.h"
 
 int engine(int numassets, int numfactors, 
 	     double *ub, double *lb, double *mu, double *sigma2, 
-	     double *V, double *F,double lambda,pthread_mutex_t *poutputmutex,int ID )
+	     double *V, double *F,double lambda,pthread_mutex_t *poutputmutex,int ID, powerbag* pbag)
 {
   int retcode = 0;
   GRBenv   *env = NULL;
@@ -23,6 +25,7 @@ int engine(int numassets, int numfactors,
   char sense;
   double *cval;
   int numnonz;
+  double sharperatio;
 
   char **names, bigname[100];
 
@@ -148,21 +151,31 @@ int engine(int numassets, int numfactors,
   /** get solution **/
 
   retcode = GRBgetdblattrarray(model, GRB_DBL_ATTR_X, 0, n, x);
-  
+
+  for(j = 0; j < numassets; j++){
+    (pbag->x)[j]=x[j];
+  }
   if(retcode) goto BACK;
   retcode = GRBgetdblattr(model, GRB_DBL_ATTR_OBJVAL, obj);
+  pbag->obj=*obj;
   if(retcode) goto BACK;  
+  sharperatio = sharpe_ratio(pbag->matrix, pbag->x, numassets, pbag->t);
 
-  /** now let's see the values **/
+  /** now let's see the values and analysis**/
   pthread_mutex_lock(poutputmutex);
   for(j = 0; j < n; j++){
     printf("%s = %g\n", names[j], x[j]);
   }
+  printf("*****************Analysis****************\n");
   printf("Objective = %g\n",*obj);
+  printf("Portfolio's sharpe ratio = %g\n", sharperatio);
+  printf("*****************************************\n");
   pthread_mutex_unlock(poutputmutex);
-
+  
   GRBfreemodel(model);
   GRBfreeenv(env);
+  
+  
 
 
 
