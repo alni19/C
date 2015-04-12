@@ -1,0 +1,39 @@
+#ifndef POWER
+
+#define POWER
+
+
+#define WAITING 100
+#define WORKING 101
+#define PREANYTHING 102
+#define DONEWITHWORK 103
+
+
+#define QUIT 200
+#define WORK 201
+#define STANDBY 202
+
+typedef struct powerbag{
+  int numberAssets;
+  int t;
+  int r,ID;
+  double lambda;
+  double **matrix;
+  double *ub;
+  double *lb;
+  int status;
+  int command;
+  int jobnumber;  
+  pthread_mutex_t *psynchro;
+  pthread_mutex_t *poutputmutex;
+}powerbag;
+
+void CALLWORKER(powerbag *pbag);
+void poweralg(int ID, int n, double *vector, double *newvector, double *matrix, powerbag *pbag, double *eigenVal);
+void poweriteration(int ID, int k, int n, double *vector, double *newvector, double *matrix, double *perror,pthread_mutex_t *poutputmutex, double *eigVal);
+void PWRcompute_error(int n, double *perror, double *newvector, double *vector);
+void newOmegaVector(int n, double *omegaVector, double *vector);
+void newMatrix(int n,double *matrix, double *vector,double eigenVal);
+void PWRfreespace(powerbag **ppbag);
+void PWRfree(double **ppaddress);
+#endif
