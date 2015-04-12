@@ -36,5 +36,6 @@ void newOmegaVector(int n, double *omegaVector, double *vector);
 void newMatrix(int n,double *matrix, double *vector,double eigenVal);
 void PWRfreespace(powerbag **ppbag);
 void PWRfree(double **ppaddress);
+void PWRfree3(double ***pmatrix, int n);
 
 #endif

@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
     int numassets = 1000;
     int numdays = 250;
     double lambda = 1;
-    double* lb, *ub;
+    double* lb,ub;
     lb = (double*)calloc(numassets,sizeof(double));
     ub = (double*)calloc(numassets,sizeof(double));
     for(i=0;i<numassets;i++){lb[i]=-10000;ub[i]=10000;}
