@@ -5,24 +5,62 @@
 #include "utilities.h"
 #include "power.h"
 
-int cheap_rank1perturb(int n, double *scratch, double *matcopy, double *matrix, double scale);
-
 void *PWR_wrapper(void *pvoidedbag);
 
 int main(int argc, char *argv[])
 {
-  int code = 0, i, j, n, initialruns, activeworkers, scheduledjobs;
-  powerbag **ppbag = NULL, *pbag;
-  double *matcopy = NULL, *scratch = NULL;
-  double scale = 1.0;
-  int quantity = 1, numworkers = 1, theworker;
-  char gotone;
+    int code = 0, i, j, n, initialruns, activeworkers, scheduledjobs;
+    int numassets = 1000;
+    int numdays = 250;
+    double lambda = 1;
+    double* lb,ub;
+    lb = (double*)calloc(numassets,sizeof(double));
+    ub = (double*)calloc(numassets,sizeof(double));
+    for(i=0;i<numassets;i++){lb[i]=-10000;ub[i]=10000;}
+    int r=5;//factor number
+    double** matrix;
+    double** realmatrix;
+    double*** matrix_array;
+    double* mu;
+    double* v;
+    double eps_square_sum = 0;
+    char line[6000];
+    //
+    powerbag **ppbag = NULL, *pbag;
+    double scale = 1.0;
+    int quantity = 1, numworkers = 1, theworker;
+    char gotone;
+    pthread_t *pthethread1;
+    pthread_mutex_t output;
+    pthread_mutex_t *psynchro_array;
+    //
+    matrix_array = (double***)calloc(quantity,sizeof(double**));
+    matrix = (double**) calloc(numassets,sizeof(double*));
+    for (i=0; i<numassets; i++) matrix[i] = (double*) calloc(numdays,sizeof(double));/*initialize the time series matrix*/
+    realmatrix = (double**) calloc(numassets,sizeof(double*));
+    for (i=0; i<numassets; i++) realmatrix[i] = (double*) calloc(numdays,sizeof(double));
+    mu = (double*)calloc(numassets,sizeof(double));
 
-  pthread_t *pthethread1;
-  pthread_mutex_t output;
-  pthread_mutex_t *psynchro_array;
+    v = (double*)calloc(numassets,sizeof(double));
+    FILE* stream = fopen("dump2.csv", "r");
 
-  if(argc < 2){ 
+    //reads data from CSV file into a matrix
+    i=0;
+    while (fgets(line, 6000, stream))
+    {
+        split(matrix[i],line);
+        i++;
+    }
+    calculate_v(matrix,v,numassets,numdays);
+    //calculates the perturbation
+    /*
+    perturb(matrix,realmatrix,numassets,numdays,v);
+    for(i=0;i<numassets;i++)
+        for (j=0;j<numdays;j++)
+            printf("%f\n",realmatrix[i][j]);
+    */
+
+  if(argc < 2){
     printf(" usage: rpower filename [-s scale] [-q quantity]\n");
     code = 1; goto BACK;
   }
@@ -77,33 +115,22 @@ int main(int argc, char *argv[])
 
 
   for(j = 0; j < numworkers; j++){
-    if((code = PWRreadnload_new(argv[1], 0, ppbag + j)))
-      goto BACK;  /** inefficient: we should read the data once, and then
-		      copy **/
+
     pbag = ppbag[j];
     pbag->psynchro = &psynchro_array[j];
     pbag->poutputmutex = &output;
     pbag->command = STANDBY;
     pbag->status = PREANYTHING;
     pbag->ID = j;
-
-    n = pbag->n;
-
-  /** now, allocate an extra matrix and a vector to use in 
-      perturbation**/
-    /** should really do it in the power code since we are putting them in
-	the bag **/
-    pbag->matcopy = (double *)calloc(n*n, sizeof(double));
-    pbag->scratch = (double *)calloc(n, sizeof(double));
-    if((!pbag->matcopy) || (!pbag->scratch)){
-      printf("no memory for matrices at %d\n", j); code = NOMEMORY; goto BACK;
-    }
-  /** and copy matrix **/
-    for(i = 0; i < n*n; i++)
-      pbag->matcopy[i] = pbag->matrix[i];
+    pbag->numberAssets = numassets;
+    pbag->t = numdays;
+    pbag->lambda = lambda;
+    pbag->ub = ub;
+    pbag->lb = lb;
+    pbag->r = r;
 
     printf("about to launch thread for worker %d\n", j);
-
+//might be some prob
     pthread_create(&pthethread1[j], NULL, &PWR_wrapper, (void *) pbag);
   }
 
@@ -112,8 +139,9 @@ int main(int argc, char *argv[])
 
   for(theworker = 0; theworker < initialruns; theworker++){
     pbag = ppbag[theworker];
-    if((code = cheap_rank1perturb(n, pbag->scratch, pbag->matcopy, pbag->matrix, scale)))
-      goto BACK;
+    matrix_array[theworker] = (double**)calloc(numassets,sizeof(double*));
+    for (i=0; i<numassets; i++) matrix_array[theworker][i] = (double*) calloc(numdays,sizeof(double));
+    perturb(matrix,matrix_array[theworker],numassets,numdays,v);
 
     pthread_mutex_lock(&output);
     printf("*****master:  worker %d will run experiment %d\n", theworker, j);
@@ -121,10 +149,10 @@ int main(int argc, char *argv[])
 
     /** tell the worker to work **/
     pthread_mutex_lock(&psynchro_array[theworker]);
+    pbag->matrix = matrix_array[theworker];
     pbag->command = WORK;
     pbag->status = WORKING;
     pbag->jobnumber = theworker;
-    pbag->itercount = 0;
     pthread_mutex_unlock(&psynchro_array[theworker]);
 
   }
@@ -141,9 +169,7 @@ int main(int argc, char *argv[])
 
 	pthread_mutex_lock(&output);
 	printf("master:  worker %d is done with job %d\n", pbag->ID, pbag->jobnumber);
-	printf(" top eigenvalue estimate: %.12e\n", pbag->topeigvalue);
 	pthread_mutex_unlock(&output);
-
 	if(scheduledjobs >= quantity){
 	  /** tell worker to quit **/
 	  pthread_mutex_lock(&output);
@@ -163,24 +189,20 @@ int main(int argc, char *argv[])
 	pthread_mutex_unlock(&output);
 	gotone = 1;
       }
-      else if( (pbag->status == WORKING) && (pbag->itercount > 100)){
-	pbag->command = INTERRUPT;
-	pthread_mutex_lock(&output);
-	printf("master: telling worker %d to interrupt\n", pbag->ID);
-	pthread_mutex_unlock(&output);
-      }
+
       pthread_mutex_unlock(&psynchro_array[theworker]);
       if(gotone) break;
       usleep(100000);
-      
+
     }
     /** at this point we have run through all workers **/
 
     if(gotone){
     /** if we are here, "theworker" can work **/
-      pbag = ppbag[theworker];
-      if((code = cheap_rank1perturb(n, pbag->scratch, pbag->matcopy, pbag->matrix, scale)))
-	goto BACK;
+        pbag = ppbag[theworker];
+        matrix_array[scheduledjobs] = (double**)calloc(numassets,sizeof(double*));
+        for (i=0; i<numassets; i++) matrix_array[scheduledjobs][i] = (double*) calloc(numdays,sizeof(double));
+        perturb(matrix,matrix_array[theworker],numassets,numdays,v);
 
       pthread_mutex_lock(&output);
       printf("master:  worker %d will run experiment %d\n", theworker, scheduledjobs);
@@ -191,7 +213,6 @@ int main(int argc, char *argv[])
       pthread_mutex_lock(&psynchro_array[theworker]);
       pbag->command = WORK;
       pbag->status = WORKING;
-      pbag->itercount = 0;
       pbag->jobnumber = scheduledjobs;
       pthread_mutex_unlock(&psynchro_array[theworker]);
 
@@ -220,50 +241,17 @@ int main(int argc, char *argv[])
     PWRfreespace(&pbag);
   }
   free(ppbag);
-	 
+
 BACK:
-  if(matcopy) free(matcopy);
-  if(scratch) free(scratch);
   return code;
 }
 
-
-
-int cheap_rank1perturb(int n, double *scratch, double *matcopy, double *matrix, double scale)
-{
-  int retcode = 0, j, i;
-  double sum2, invnorm;
-
-  /** first, create a random vector **/
-  for(j = 0; j < n; j++)
-    scratch[j] = ((double) rand())/((double) RAND_MAX);
-
-  /** next, convert to norm 1 **/
-  sum2 = 0;
-  for(j = 0; j < n; j++)
-    sum2 += scratch[j]*scratch[j];
-
-  invnorm = 1/sqrt(sum2);
-
-  /** rescale **/
-  for(j = 0; j < n; j++)
-    scratch[j] *= scale*invnorm;
-
-
-  printf("scale for random perturbation: %g\n", scale);
-
-  for(i = 0; i < n; i++)
-    for(j = 0; j < n; j++)
-      matrix[i*n + j] = scratch[i]*scratch[j] + matcopy[i*n + j];
-
-  return retcode;
-}
 
 void *PWR_wrapper(void *pvoidedbag)
 {
   powerbag *pbag = (powerbag *) pvoidedbag;
 
-  PWRpoweralg_new(pbag);
+  CALLWORKER(pbag);
 
   return (void *) &pbag->ID;
 }
