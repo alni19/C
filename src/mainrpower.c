@@ -29,13 +29,13 @@ int main(int argc, char *argv[])
     lb = (double*)calloc(numassets,sizeof(double));
     ub = (double*)calloc(numassets,sizeof(double));
     for(i=0;i<numassets;i++){lb[i]=-10000;ub[i]=10000;}
-    printf("%s","check point 1\n");
+
     matrix_array = (double***)calloc(quantity,sizeof(double**));
     matrix = (double**) calloc(numassets,sizeof(double*));
     for (i=0; i<numassets; i++) matrix[i] = (double*) calloc(numdays,sizeof(double));/*initialize the time series matrix*/
 
     v = (double*)calloc(numassets,sizeof(double));
-    printf("%s","check point 2\n");
+
     /*reads data from CSV file into a matrix*/
     csvread("dump.csv",matrix);
     printf("%s\n","show me");
@@ -92,6 +92,7 @@ int main(int argc, char *argv[])
   if(!ppbag){
     printf("could not create bag array\n"); code = NOMEMORY; goto BACK;
   }
+
   for(j=0; j<numworkers; j++)
   {
     ppbag[j]=(powerbag*)calloc(1,sizeof(powerbag));

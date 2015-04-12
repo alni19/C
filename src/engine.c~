@@ -151,8 +151,7 @@ int engine(int numassets, int numfactors,
   
   if(retcode) goto BACK;
   retcode = GRBgetdblattr(model, GRB_DBL_ATTR_OBJVAL, obj);
-  if(retcode) goto BACK;  
-
+  
   /** now let's see the values **/
   pthread_mutex_lock(poutputmutex);
   for(j = 0; j < n; j++){

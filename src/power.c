@@ -5,7 +5,7 @@
 
 int engine(int numassets, int numfactors, 
 	     double *ub, double *lb, double *mu, double *sigma2, 
-	     double *V, double *F,double lambda,pthread_mutex_t *poutputmutex );
+	     double *V, double *F,double lambda,pthread_mutex_t *poutputmutex ,int ID);
 
 void poweralg(int ID, int n, double *vector, double *newvector, double *matrix, powerbag *pbag, double *eigenVal)
 {
@@ -157,15 +157,13 @@ void CALLWORKER(powerbag *pbag)
   double *F =NULL;
   double *residual= NULL;
   double *mu = NULL;
-  double **timeSeries = NULL;
   double *ub = NULL;
   double *lb = NULL;
   double lambda;  
 ub = pbag->ub;
 lb = pbag->lb;  
 lambda = pbag->lambda;
-  
-  timeSeries=pbag->matrix;
+
   r=pbag->r;
   n=pbag->numberAssets;
   t = pbag->t;
@@ -225,14 +223,17 @@ lambda = pbag->lambda;
   eigenVector = (double **) calloc(r,sizeof(double *));
   mu = (double *) calloc(n,sizeof(double));
 
-  
+
   /********calculate mu and cov as matrix***********/
-  calcMuCov(timeSeries,n,t,mu,matrix);  
-  
+  calcMuCov(pbag->matrix,n,t,mu,matrix);  
+
   for(i=0;i<r;i++)
   {
    eigenVector[i] = (double*)calloc(n,sizeof(double));
   }
+
+
+
 
   Qmatrix=(double*) calloc(n*n,sizeof(double));
 
@@ -310,12 +311,21 @@ lambda = pbag->lambda;
   printf("numassets: %d; numfactors: %d\n", n, r);
   pthread_mutex_unlock(pbag->poutputmutex);
   
-  retcode = engine(n,r,ub,lb,mu,residual,Vtranspose,F,lambda,pbag->poutputmutex);
-  if(retcode) goto BACK;  
+  retcode = engine(n,r,ub,lb,mu,residual,Vtranspose,F,lambda,pbag->poutputmutex,ID);
+  if(retcode) 
+  {
+  pthread_mutex_lock(pbag->poutputmutex);
+  printf(" exiting with engine retcode= %d\n", retcode);
+  pthread_mutex_unlock(pbag->poutputmutex);
+
+  }
   
 
 
 /**********Done with work**********************/
+
+
+
    pthread_mutex_lock(pbag->psynchro);
    pbag->status = DONEWITHWORK;
    pbag->command = STANDBY;
@@ -329,10 +339,7 @@ lambda = pbag->lambda;
   printf(" ID %d quitting\n", pbag->ID);
   pthread_mutex_unlock(pbag->poutputmutex);  
 
-  BACK:
-  pthread_mutex_lock(pbag->poutputmutex);
-  printf(" retcode= %d\n", retcode);
-  pthread_mutex_unlock(pbag->poutputmutex);
+
 }
 
 

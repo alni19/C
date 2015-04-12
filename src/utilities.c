@@ -121,6 +121,9 @@ void calcMuCov(double **matrix, int n, int t, double *mu, double *cov)
   double sum;
   double *returnMatrix;
   returnMatrix = (double*) calloc(n*(t-1),sizeof(double));
+
+
+
   for(i=0;i<n;i++)
   {
      sum=0;
@@ -131,6 +134,7 @@ void calcMuCov(double **matrix, int n, int t, double *mu, double *cov)
      }
      mu[i] = sum/(t-1);
   }
+
   for(i=0;i<n;i++)
   {
      for(j=0;j<n;j++)
