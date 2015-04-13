@@ -267,8 +267,10 @@ lambda = pbag->lambda;
   {
 	  poweralg(ID,n, vector, newvector, matrix,pbag, &(eigenVal[i]));
 	  for(j=0;j<n;j++)
-	  {
+	  {       
+                  if (vector[0]>0)
 		  eigenVector[i][j] = vector[j];
+                  else eigenVector[i][j] = -vector[j];
 	  }	  
 	  newOmegaVector(n,omegaVector,vector);
           /*let vector=new omega vector*/
@@ -291,7 +293,7 @@ lambda = pbag->lambda;
   {
 	  for(j=0;j<r;j++)
 	  {
-		  if(i==j) F[i*r+j]=eigenVal[i];
+		  if(i==j) F[i*r+j] = eigenVal[i];
                   else F[i*r+j]=0;
 		  
 	  }
@@ -301,10 +303,16 @@ lambda = pbag->lambda;
   {
      residual[i] = fabs(Qmatrix[i*n+i]-matrix[i*n+i]);
   }  
+/* test eigenvector
+  printf("\n**************\n");
 
-  
+  for (i=0;i<r;i++) 
+      {for (j=0;j<n;j++){printf("%g ",eigenVector[i][j]);}
+       printf("\n");
+      };
 
-
+  printf("\n**************\n");
+*/
   /*********Part two: Gurobi Optimization*********/
 
   pthread_mutex_lock(pbag->poutputmutex);

@@ -1,1 +1,5 @@
-Multi-threaded implementation of PCA for factor-driven mean-variance portfolio selection problem based on a master-worker framework.
+src -mainrpower.c runs the "master"
+    -power.c "workers" in threads
+    -engine.c engine that solves PCA which uses gurobi
+    -utilities.c utility functions
+

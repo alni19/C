@@ -1,0 +1,6 @@
+numassets
+10
+numdays
+7
+lambda
+1

@@ -166,10 +166,10 @@ int engine(int numassets, int numfactors,
   for(j = 0; j < n; j++){
     printf("%s = %g\n", names[j], x[j]);
   }
-  printf("*****************Analysis****************\n");
+  printf("\n*****************Analysis****************\n");
   printf("Objective = %g\n",*obj);
   printf("Portfolio's sharpe ratio = %g\n", sharperatio);
-  printf("*****************************************\n");
+  printf("*****************************************\n\n");
   pthread_mutex_unlock(poutputmutex);
   
   GRBfreemodel(model);
